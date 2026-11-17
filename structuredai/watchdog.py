@@ -37,6 +37,7 @@ class Watchdog:
             "--host", self.host, "--port", str(self.port),
             "-c", str(self.cfg.llm_ctx_size), "-np", "1", "-t", str(self.cfg.cpu_threads),
             "-ctk", self.cfg.llama_kv_cache_type, "-ctv", self.cfg.llama_kv_cache_type, "--no-warmup",
+            *(["--alias", self.cfg.llm_model] if self.cfg.llm_model else []),
             *(["--reasoning-budget", "0"] if self.cfg.llm_disable_thinking else []),
         ]
         self._log_fp = log_p.open("w", encoding="utf-8")

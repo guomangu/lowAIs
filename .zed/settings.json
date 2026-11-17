@@ -7,5 +7,18 @@
     "env": {
       "PYTHONUNBUFFERED": "1"
     }
+  },
+  "agent": {
+    "default_model": {
+      "provider": "structuredai_local",
+      "model": "qwen3.5-0.8b-q4_k_m",
+      "enable_thinking": false
+    },
+    "favorite_models": [
+      {
+        "provider": "structuredai_local",
+        "model": "qwen3.5-0.8b-q4_k_m"
+      }
+    ]
   }
 }

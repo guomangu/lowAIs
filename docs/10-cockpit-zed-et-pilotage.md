@@ -13,7 +13,7 @@ Ce guide décrit l'expérience utilisateur complète sous **Fedora** (et dériv�
 
 Le script s'adapte dynamiquement à l'utilisateur courant (`$USER`, `$HOME`, CPU, RAM) sur tout système Fedora :
 1. **Dépendances système (`dnf`)** : installe uniquement les paquets manquants (`git`, `python3`, `python3-pip`, `curl`, `flatpak`, `util-linux`, `systemd`, et `llama-cpp` depuis les dépôts Fedora si disponible ; sinon compile `llama-server` dans `~/.local/share/structuredai/llama.cpp`).
-2. **Zed Editor (`dev.zed.Zed`)** : détecte Zed (natif ou Flatpak), l'installe via Flathub s'il est absent, crée un alias `~/.local/bin/zed`, et accorde les droits Flatpak sur `structuredAI` et `TARGET_PROJECT_DIR`.
+2. **Zed Editor (`dev.zed.Zed`)** : détecte Zed (natif ou Flatpak), l'installe via Flathub s'il est absent, crée un alias `~/.local/bin/zed`, accorde les droits Flatpak sur `structuredAI` et `TARGET_PROJECT_DIR`, et configure automatiquement l'**assistant IA local par défaut dans Zed** (`language_models.openai_compatible.structuredai_local`, `agent.default_model`, et l'agent ACP `StructuredAI Local` dans `agent_servers`).
 3. **Environnement Python `.venv`** : crée `.venv` et installe les outils de vérification (`pytest`, `ruff`).
 4. **Assistant `.env` interactif** : génère `.env` avec des valeurs intelligentes par défaut (modifiables à tout moment) : dossier projet cible, modèle IA léger (`Qwen3.5-0.8B-Q4_K_M`), durée (`24h`), plafond RAM (`1024 Mo`) et threads P-cores.
 5. **Téléchargement GGUF** : résout et télécharge le modèle configuré depuis `LLM_HF_REPO` / `LLM_HF_QUANT` si absent localement.

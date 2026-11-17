@@ -58,7 +58,9 @@ if src.exists():
 PYEOF
   if command -v flatpak >/dev/null 2>&1 && flatpak info dev.zed.Zed >/dev/null 2>&1; then
     flatpak override --user --filesystem="$TARGET_DIR" dev.zed.Zed 2>/dev/null || true
+    flatpak override --user --env=STRUCTUREDAI_LOCAL_API_KEY=local dev.zed.Zed 2>/dev/null || true
   fi
+  "$PYTHON_BIN" -m structuredai.zed_config "$ROOT_DIR" "$ENV_FILE" >/dev/null 2>&1 || true
 }
 
 if [ "$ACTION" = "start" ]; then

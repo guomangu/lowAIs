@@ -283,11 +283,13 @@ for t in tasks:
 dst.write_text(json.dumps(tasks, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 PYEOF
   cp -f "$ROOT_DIR/.zed/settings.json" "$proj_dir/.zed/settings.json"
+  PYTHONPATH="$ROOT_DIR" python3 -m structuredai.zed_config "$ROOT_DIR" "$ENV_FILE"
 
   if flatpak info dev.zed.Zed >/dev/null 2>&1; then
     flatpak override --user --filesystem="$ROOT_DIR" dev.zed.Zed
     flatpak override --user --filesystem="$proj_dir" dev.zed.Zed
-    ok "Permissions Flatpak Zed accordées sur $ROOT_DIR et $proj_dir."
+    flatpak override --user --env=STRUCTUREDAI_LOCAL_API_KEY=local dev.zed.Zed
+    ok "Permissions Flatpak Zed & assistant IA local configurés."
   fi
 }
 
@@ -354,12 +356,13 @@ launch_zed_workspace() {
   zed_cmd="$(find_zed_cmd)"
   if [ -n "$zed_cmd" ]; then
     log "Ouverture de Zed sur $proj_dir (avec SPEC.md et .env)..."
+    export STRUCTUREDAI_LOCAL_API_KEY="local"
     if [ "$zed_cmd" = "flatpak run dev.zed.Zed" ]; then
       nohup flatpak run dev.zed.Zed "$proj_dir" "$proj_dir/SPEC.md" "$ENV_FILE" >/dev/null 2>&1 &
     else
       nohup "$zed_cmd" "$proj_dir" "$proj_dir/SPEC.md" "$ENV_FILE" >/dev/null 2>&1 &
     fi
-    ok "Zed lancé ! Dans Zed, utilisez Alt+Shift+T (ou task: spawn) -> 'StructuredAI: Demarrer / Reprendre'."
+    ok "Zed lancé ! L'assistant IA local ($proj_dir) est configuré par défaut."
   fi
 }
 

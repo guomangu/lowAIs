@@ -1,0 +1,11 @@
+{
+  "autosave": "on_focus_change",
+  "format_on_save": "off",
+  "tab_size": 4,
+  "hard_tabs": false,
+  "terminal": {
+    "env": {
+      "PYTHONUNBUFFERED": "1"
+    }
+  }
+}
