@@ -1,0 +1,36 @@
+# ==============================================================================
+# Modèle de Profil de Stack Personnalisée (stack.toml)
+# ==============================================================================
+# Copiez ce fichier et renseignez STACK_PROFILE_PATH=/chemin/vers/stack.toml
+# avec TARGET_STACK=custom dans votre fichier .env.
+
+[stack]
+name = "custom_stack"
+# Extensions soumises à l'invariant strict MAX_LINES_PER_FILE (défaut 100)
+code_extensions = [".py"]
+# Extensions exemptées du plafond de 100 lignes
+exempt_extensions = [".md", ".json", ".toml", ".yaml", ".yml", ".lock"]
+# Modèle de nommage des fichiers de tests générés en 5_SYNTHESIS
+test_file_pattern = "tests/test_{stem}.py"
+
+[commands]
+# Placeholders supportés : {file}, {dir}, {test_file}, {stem}, {project_dir}
+bootstrap = "echo 'Environment ready'"
+syntax_check = "python -m py_compile {file}"
+lint = "ruff check {file}"
+test_targeted = "pytest -q --tb=short {test_file}"
+test_suite = "pytest -q"
+build_check = "python -m compileall -q {project_dir}"
+
+[symbols]
+# Stratégie d'extraction déterministe pour REALITY.md :
+# python_ast | tree_sitter | ctags | regex
+extractor = "python_ast"
+# Utilisé uniquement si extractor = "regex"
+export_regex = "^(def|class|pub fn|export function)\\s+([A-Za-z0-9_]+)"
+import_regex = "^(import|from|use|require)\\s+(.+)$"
+
+[limits]
+# Surcharge locale optionnelle de la limite de lignes
+max_lines_per_file = 100
+split_warning_lines = 85

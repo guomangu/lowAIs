@@ -1,0 +1,83 @@
+[
+  {
+    "label": "StructuredAI: Demarrer / Reprendre (start.sh)",
+    "command": "./start.sh",
+    "args": ["start"],
+    "reveal": "always",
+    "reveal_target": "dock",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false
+  },
+  {
+    "label": "StructuredAI: Diagnostic Systeme (doctor)",
+    "command": "./start.sh",
+    "args": ["doctor"],
+    "reveal": "always",
+    "reveal_target": "dock",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": true
+  },
+  {
+    "label": "StructuredAI: Statut & Dashboard",
+    "command": "./start.sh",
+    "args": ["status"],
+    "reveal": "always",
+    "reveal_target": "dock",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": true
+  },
+  {
+    "label": "StructuredAI: Mettre en Pause",
+    "command": "./start.sh",
+    "args": ["pause"],
+    "reveal": "no_focus",
+    "reveal_target": "dock",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": true
+  },
+  {
+    "label": "StructuredAI: Reprendre apres Pause",
+    "command": "./start.sh",
+    "args": ["resume"],
+    "reveal": "no_focus",
+    "reveal_target": "dock",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": true
+  },
+  {
+    "label": "StructuredAI: Prioriser le Fichier Actif",
+    "command": "./start.sh",
+    "args": ["priority", "$ZED_FILE"],
+    "reveal": "no_focus",
+    "reveal_target": "dock",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": true
+  },
+  {
+    "label": "StructuredAI: Relancer ce Noeud",
+    "command": "./start.sh",
+    "args": ["retry", "$ZED_FILE"],
+    "reveal": "no_focus",
+    "reveal_target": "dock",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": true
+  },
+  {
+    "label": "StructuredAI: Arreter Proprement",
+    "command": "./start.sh",
+    "args": ["stop"],
+    "reveal": "always",
+    "reveal_target": "dock",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": true
+  },
+  {
+    "label": "StructuredAI: Tests du Framework (pytest)",
+    "command": ".venv/bin/pytest",
+    "args": ["-q"],
+    "reveal": "always",
+    "reveal_target": "dock",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false
+  }
+]
