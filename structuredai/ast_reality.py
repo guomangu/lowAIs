@@ -2,8 +2,8 @@
 
 import ast
 import hashlib
-from pathlib import Path
 import re
+from pathlib import Path
 
 _GENERIC_EXPORT_RE = re.compile(
     r"^\s*(?:export\s+(?:async\s+)?(?:function|class|const|interface|type)|pub\s+(?:async\s+)?(?:fn|struct|enum|trait)|func)\s+([A-Za-z0-9_]+)",
@@ -17,7 +17,7 @@ def extract_symbols(code: str, ext: str) -> dict[str, list[str]]:
     if ext == ".py":
         return _extract_python(code)
     exports = sorted(set(_GENERIC_EXPORT_RE.findall(code)))
-    imports = sorted(set(m.strip() for m in _GENERIC_IMPORT_RE.findall(code)))
+    imports = sorted({m.strip() for m in _GENERIC_IMPORT_RE.findall(code)})
     return {"imports": imports[:15], "signatures": exports[:20], "exports": exports}
 
 

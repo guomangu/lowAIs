@@ -2,11 +2,12 @@
 
 import json
 import os
-from pathlib import Path
 import time
+from pathlib import Path
 
 from structuredai.ast_reality import extract_symbols, format_reality_md, legacy_outline
 from structuredai.config import Config
+from structuredai.pass_critique import run_architect
 from structuredai.steering import SteeringDirectives, consume_directives
 
 
@@ -69,3 +70,18 @@ def index_brownfield(cfg: Config, meta_dir: Path, code_exts: list[str], exports:
             rpath.parent.mkdir(parents=True, exist_ok=True)
             extra = legacy_outline(p, cfg.max_ingest_bytes) if len(txt.splitlines()) > cfg.max_lines_per_file else "Existing module"
             rpath.write_text(format_reality_md(rel, len(txt.splitlines()), syms, extra), encoding="utf-8")
+
+
+def init_architect_with_retries(ctx: dict, state: dict, state_path: Path) -> None:
+    """Retry initial 0_ARCHITECT decomposition up to max_retries on small-LLM format errors."""
+    spec = ctx["spec_text"]
+    last_err = ""
+    for _ in range(ctx["cfg"].max_retries):
+        try:
+            prompt_spec = f"{spec}\n\n[FIX_HINT]: {last_err}" if last_err else spec
+            run_architect(ctx, prompt_spec)
+            atomic_write_json(state_path, state)
+            return
+        except (RuntimeError, ValueError, TypeError, KeyError, OSError, PermissionError) as exc:
+            last_err = str(exc)[:300]
+    raise RuntimeError(f"0_ARCHITECT failed after retries: {last_err}")

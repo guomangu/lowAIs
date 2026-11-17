@@ -64,8 +64,9 @@ PYEOF
 if [ "$ACTION" = "start" ]; then
   sync_zed_if_enabled
   if command -v systemd-run >/dev/null 2>&1 && [ "$AUTO_START_LLM" = "true" ] && systemd-run --user --scope -p MemoryMax=64M true >/dev/null 2>&1; then
-    echo "[StructuredAI] Démarrage sous cgroup strict MemoryMax=${RAM_LIMIT_MB}M (Swap=0)..."
-    exec systemd-run --user --scope -p "MemoryMax=${RAM_LIMIT_MB}M" -p MemorySwapMax=0 \
+    HARD_CAP_MB=$((RAM_LIMIT_MB + 256))
+    echo "[StructuredAI] Démarrage sous cgroup (MemoryHigh=${RAM_LIMIT_MB}M, MemoryMax=${HARD_CAP_MB}M, Swap=0)..."
+    exec systemd-run --user --scope -p "MemoryHigh=${RAM_LIMIT_MB}M" -p "MemoryMax=${HARD_CAP_MB}M" -p MemorySwapMax=0 \
       "$PYTHON_BIN" -m structuredai.main start --env "$ENV_FILE" "$@"
   fi
   exec "$PYTHON_BIN" -m structuredai.main start --env "$ENV_FILE" "$@"

@@ -3,9 +3,9 @@
 import gzip
 import json
 import os
-from pathlib import Path
 import shutil
 import time
+from pathlib import Path
 
 from structuredai.config import Config
 

@@ -1,9 +1,9 @@
 """Deterministic code & test validators: line cap, placeholders, imports & anti-triche."""
 
 import ast
-from pathlib import Path
 import re
 import sys
+from pathlib import Path
 
 from structuredai.config import Config
 

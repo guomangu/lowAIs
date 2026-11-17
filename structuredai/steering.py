@@ -1,8 +1,8 @@
 """Live human steering integration via .orchestrator/STEERING.md (editable in Zed)."""
 
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
-import re
 
 STEERING_TEMPLATE = """# StructuredAI — Pilotage en Direct (Éditable dans Zed)
 # Modifiez ce fichier à tout moment : l'agent le lit au début de chaque cycle.

@@ -1,7 +1,6 @@
 """Host watchdog managing llama-server lifecycle, RAM ceiling, disk & thermal pauses."""
 
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import time
@@ -31,18 +30,25 @@ class Watchdog:
 
     def start_llama(self) -> None:
         self.stop_llama()
+        log_p = self.cfg.target_dir / self.cfg.state_dir_name / "llama-server.log"
+        log_p.parent.mkdir(parents=True, exist_ok=True)
         cmd = [
             self.cfg.llama_server_bin, "-m", self.cfg.llm_model_path,
             "--host", self.host, "--port", str(self.port),
             "-c", str(self.cfg.llm_ctx_size), "-np", "1", "-t", str(self.cfg.cpu_threads),
             "-ctk", self.cfg.llama_kv_cache_type, "-ctv", self.cfg.llama_kv_cache_type, "--no-warmup",
+            *(["--reasoning-budget", "0"] if self.cfg.llm_disable_thinking else []),
         ]
-        self.proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+        self._log_fp = log_p.open("w", encoding="utf-8")
+        self.proc = subprocess.Popen(cmd, stdout=self._log_fp, stderr=subprocess.STDOUT, start_new_session=True)
         for _ in range(40):
             if is_port_open(self.host, self.port):
                 return
+            if self.proc.poll() is not None:
+                break
             time.sleep(0.5)
-        raise RuntimeError(f"llama-server failed to listen on {self.host}:{self.port}")
+        tail = log_p.read_text(encoding="utf-8", errors="ignore")[-300:] if log_p.exists() else ""
+        raise RuntimeError(f"llama-server failed on {self.host}:{self.port}: {tail}")
 
     def stop_llama(self) -> None:
         if self.proc and self.proc.poll() is None:
@@ -52,6 +58,9 @@ class Watchdog:
             except subprocess.TimeoutExpired:
                 self.proc.kill()
         self.proc = None
+        if hasattr(self, "_log_fp") and self._log_fp:
+            self._log_fp.close()
+            self._log_fp = None
 
     def check_health(self, force_restart: bool = False) -> tuple[float, float | None, bool]:
         """Monitor RAM, thermal zone, and disk headroom; returns (rss_mb, temp_c, low_disk)."""

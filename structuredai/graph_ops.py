@@ -69,7 +69,7 @@ def next_actionable_node(nodes: dict[str, dict]) -> str | None:
     scores = compute_priorities(nodes)
     reverify = [k for k, v in nodes.items() if v.get("state") == "NEEDS_REVERIFY"]
     if reverify:
-        return sorted(reverify, key=lambda k: (-scores.get(k, 0), k))[0]
+        return min(reverify, key=lambda k: (-scores.get(k, 0), k))
     active_states = {"0_ARCHITECT", "1_DRAFT", "2_EXTRACT", "3_CRITIQUE", "4_REBALANCE", "5_SYNTHESIS"}
     ready: list[str] = []
     for name, info in nodes.items():
@@ -83,4 +83,4 @@ def next_actionable_node(nodes: dict[str, dict]) -> str | None:
             ready.append(name)
     if not ready:
         return None
-    return sorted(ready, key=lambda k: (-scores.get(k, 0), k))[0]
+    return min(ready, key=lambda k: (-scores.get(k, 0), k))

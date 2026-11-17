@@ -1,8 +1,8 @@
 """Chaos tests: JSON noise, stagnation ping-pong, anti-triche, DAG cycles, ripple & security."""
 
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 
 from structuredai.error_distiller import StagnationTracker, check_degeneration
 from structuredai.graph_ops import detect_cycles, next_actionable_node, propagate_ripple

@@ -1,9 +1,9 @@
 """Tests for invariants (<=100L/module), .env config & TimeBudgetManager."""
 
 import json
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 
 from structuredai.config_loader import build_config, validate_config
 from structuredai.env_parse import parse_duration

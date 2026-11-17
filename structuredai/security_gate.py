@@ -1,7 +1,7 @@
 """Host confinement (PathJail), protected paths, env sanitization & dangerous call scanner."""
 
-from pathlib import Path
 import re
+from pathlib import Path
 
 PROTECTED_BASENAMES = {".env", ".env.local", "SPEC.md", "stack.toml"}
 _DANGEROUS_PATTERNS = [
@@ -25,9 +25,8 @@ class PathJail:
         p = Path(rel_or_abs)
         cand = p if p.is_absolute() else (self.root / p)
         for parent in [cand, *cand.parents]:
-            if parent.exists() and parent.is_symlink():
-                if not parent.resolve().is_relative_to(self.root):
-                    raise PermissionError(f"Symlink escape blocked: {rel_or_abs}")
+            if parent.exists() and parent.is_symlink() and not parent.resolve().is_relative_to(self.root):
+                raise PermissionError(f"Symlink escape blocked: {rel_or_abs}")
             if parent == self.root:
                 break
         resolved = cand.resolve()
@@ -53,9 +52,8 @@ def scan_dangerous_calls(code: str, reserved_port: int = 18080) -> list[str]:
     for rx, msg in _DANGEROUS_PATTERNS:
         if rx.search(code):
             issues.append(msg)
-    if str(reserved_port) in code and ("bind" in code or "listen" in code or "port" in code.lower()):
-        if not any("18080" in i for i in issues):
-            issues.append(f"Potential collision with reserved LLM port {reserved_port}")
+    if str(reserved_port) in code and ("bind" in code or "listen" in code or "port" in code.lower()) and not any("18080" in i for i in issues):
+        issues.append(f"Potential collision with reserved LLM port {reserved_port}")
     return issues
 
 

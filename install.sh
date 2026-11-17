@@ -46,8 +46,11 @@ detect_fedora() {
 }
 
 detect_physical_threads() {
-  local cores
-  cores=$(lscpu -p=Core,Socket 2>/dev/null | grep -v '^#' | sort -u | wc -l || nproc || echo 4)
+  local cores=""
+  cores=$(lscpu -p=Core,Socket 2>/dev/null | grep -v '^#' | sort -u | wc -l || true)
+  if [ -z "$cores" ] || [ "$cores" -eq 0 ] 2>/dev/null; then
+    cores=$(nproc 2>/dev/null || echo 4)
+  fi
   [ "$cores" -lt 2 ] && cores=2
   [ "$cores" -gt 6 ] && cores=6
   printf "%s" "$cores"
@@ -163,6 +166,7 @@ configure_env_assistant() {
   log "Assistant de configuration (.env modifiable à tout moment) :"
   local def_proj="$HOME/Documents/mon-projet-ia"
   local proj_dir choice duration stack ram_mb threads model_name hf_repo hf_quant gguf_name model_path
+  local provider="llama_cpp" base_url="http://127.0.0.1:18080/v1" auto_srv="true"
 
   proj_dir=$(ask_default "1/4 Dossier du projet cible (où l'IA crée fichiers/dossiers)" "$def_proj")
   proj_dir="${proj_dir/#\~/$HOME}"
@@ -173,7 +177,7 @@ configure_env_assistant() {
     echo "2/4 Modèle IA local :"
     echo "    1) Qwen3.5-0.8B (Q4_K_M, ~550 Mo — Recommandé budget <= 1 Go RAM)"
     echo "    2) Qwen2.5-Coder-1.5B (Q4_K_M, ~1.1 Go — Si >= 2 Go RAM disponibles)"
-    echo "    3) Autre modèle / API OpenAI-compatible (à éditer dans .env)"
+    echo "    3) Autre modèle / API OpenAI-compatible (Ollama ou endpoint distant)"
     choice=$(ask_default "Votre choix (1/2/3)" "1")
   fi
 
@@ -184,6 +188,16 @@ configure_env_assistant() {
       hf_quant="Q4_K_M"
       gguf_name="qwen2.5-coder-1.5b-instruct-q4_k_m.gguf"
       ram_mb="1792"
+      ;;
+    3)
+      provider=$(ask_default "    Provider (llama_cpp / ollama / openai_compat)" "openai_compat")
+      base_url=$(ask_default "    URL base (/v1)" "http://127.0.0.1:11434/v1")
+      model_name=$(ask_default "    Identifiant modèle" "qwen3.5:0.8b")
+      hf_repo=""
+      hf_quant="Q4_K_M"
+      gguf_name=""
+      ram_mb=$(ask_default "    Plafond RAM (Mo)" "1024")
+      [ "$provider" != "llama_cpp" ] && auto_srv="false"
       ;;
     *)
       model_name="qwen3.5-0.8b-q4_k_m"
@@ -197,15 +211,17 @@ configure_env_assistant() {
   duration=$(ask_default "3/4 Durée autonome cible (ex: 30m, 4h, 24h, 72h)" "24h")
   stack=$(ask_default "4/4 Stack technologique (auto, python, node_ts, rust, go, custom)" "auto")
   threads="$(detect_physical_threads)"
-  model_path="$HOME/.local/share/structuredai/models/$gguf_name"
+  model_path=""
+  [ -n "$gguf_name" ] && model_path="$HOME/.local/share/structuredai/models/$gguf_name"
 
   cp "$ROOT_DIR/.env.example" "$ENV_FILE"
-  python3 - "$ENV_FILE" "$proj_dir" "$duration" "$stack" "$model_name" "$hf_repo" "$hf_quant" "$model_path" "$ram_mb" "$threads" << 'PYEOF'
+  python3 - "$ENV_FILE" "$proj_dir" "$duration" "$stack" "$model_name" "$hf_repo" "$hf_quant" "$model_path" "$ram_mb" "$threads" "$provider" "$base_url" "$auto_srv" << 'PYEOF'
 import pathlib, sys
-env_p, proj, dur, stk, mod, repo, quant, mpath, ram, thr = sys.argv[1:]
-rss = str(int(int(ram) * 0.85))
+env_p, proj, dur, stk, mod, repo, quant, mpath, ram, thr, prov, burl, asrv = sys.argv[1:]
+rss = str(max(256, int(int(ram) * 0.85)))
 updates = {
     "TARGET_PROJECT_DIR": proj, "RUN_DURATION": dur, "TARGET_STACK": stk,
+    "LLM_PROVIDER": prov, "LLM_BASE_URL": burl, "LLM_AUTO_START_SERVER": asrv,
     "LLM_MODEL": mod, "LLM_HF_REPO": repo, "LLM_HF_QUANT": quant,
     "LLM_MODEL_PATH": mpath, "RAM_LIMIT_MB": ram, "LLAMA_RSS_RESTART_MB": rss,
     "CPU_THREADS": thr,
@@ -220,7 +236,7 @@ for ln in pathlib.Path(env_p).read_text(encoding="utf-8").splitlines():
     lines.append(ln)
 pathlib.Path(env_p).write_text("\n".join(lines) + "\n", encoding="utf-8")
 PYEOF
-  ok ".env généré (CPU_THREADS=$threads, RAM_LIMIT_MB=$ram)."
+  ok ".env généré (CPU_THREADS=$threads, RAM_LIMIT_MB=$ram_mb, TARGET_PROJECT_DIR=$proj_dir)."
 }
 
 read_env_val() {
@@ -247,7 +263,11 @@ sync_zed_and_project() {
     ok "SPEC.md modèle créé dans $proj_dir/$spec_rel"
   fi
   if [ ! -f "$proj_dir/.orchestrator/STEERING.md" ]; then
-    PYTHONPATH="$ROOT_DIR" python3 -c "from pathlib import Path; from structuredai.steering import ensure_steering_file; ensure_steering_file(Path('$proj_dir/.orchestrator/STEERING.md'))"
+    PYTHONPATH="$ROOT_DIR" python3 - "$proj_dir/.orchestrator/STEERING.md" << 'PYEOF'
+import pathlib, sys
+from structuredai.steering import ensure_steering_file
+ensure_steering_file(pathlib.Path(sys.argv[1]))
+PYEOF
   fi
   python3 - "$ROOT_DIR/.zed/tasks.json" "$proj_dir/.zed/tasks.json" "$ROOT_DIR" "$ENV_FILE" << 'PYEOF'
 import json, pathlib, sys
@@ -293,22 +313,36 @@ download_model_if_needed() {
 import json, sys, urllib.request
 repo, quant = sys.argv[1], sys.argv[2].lower()
 url = f"https://huggingface.co/api/models/{repo}"
-with urllib.request.urlopen(url, timeout=20) as r:
-    data = json.loads(r.read().decode("utf-8"))
-files = [s["rfilename"] for s in data.get("siblings", []) if s.get("rfilename", "").lower().endswith(".gguf")]
-matches = [f for f in files if quant in f.lower()]
-pick = matches[0] if matches else (files[0] if files else "")
-if pick:
-    print(f"https://huggingface.co/{repo}/resolve/main/{pick}")
+try:
+    with urllib.request.urlopen(url, timeout=20) as r:
+        data = json.loads(r.read().decode("utf-8"))
+    files = [s["rfilename"] for s in data.get("siblings", []) if s.get("rfilename", "").lower().endswith(".gguf")]
+    matches = [f for f in files if quant in f.lower()]
+    pick = matches[0] if matches else (files[0] if files else "")
+    if pick:
+        print(f"https://huggingface.co/{repo}/resolve/main/{pick}")
+except Exception as exc:
+    print(f"ERROR:{exc}", file=sys.stderr)
 PYEOF
-  )
+  ) || true
   if [ -z "$dl_url" ]; then
     warn "Impossible de résoudre automatiquement le GGUF sur $repo. Téléchargez-le manuellement vers $mpath."
     return 0
   fi
   log "Téléchargement : $dl_url -> $mpath"
-  curl -L -C - --progress-bar -o "$mpath.part" "$dl_url" && mv "$mpath.part" "$mpath"
-  ok "Modèle téléchargé avec succès : $mpath"
+  if curl -fL -C - --retry 3 --retry-delay 2 --progress-bar -o "$mpath.part" "$dl_url"; then
+    local fsize
+    fsize=$(stat -c%s "$mpath.part" 2>/dev/null || echo 0)
+    if [ "$fsize" -ge 10485760 ]; then
+      mv "$mpath.part" "$mpath"
+      ok "Modèle téléchargé avec succès : $mpath ($(($fsize / 1048576)) Mo)"
+    else
+      rm -f "$mpath.part"
+      warn "Fichier téléchargé trop petit (<10 Mo) ; téléchargement annulé."
+    fi
+  else
+    warn "Échec du téléchargement depuis $dl_url. Relancez ./install.sh plus tard."
+  fi
 }
 
 launch_zed_workspace() {

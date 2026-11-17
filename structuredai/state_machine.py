@@ -1,16 +1,22 @@
 """Main state machine loop coordinating multi-day execution, steering & safe freeze."""
 
 import time
+
 from structuredai.config import Config
 from structuredai.git_tx import GitTx
 from structuredai.graph_ops import next_actionable_node
 from structuredai.llm_client import LLMClient
 from structuredai.node_runner import NodeRunner
-from structuredai.pass_critique import run_architect
 from structuredai.security_gate import PathJail
 from structuredai.stack_adapter import StackAdapter, build_deps_reality
 from structuredai.stack_detector import detect_project_mode, detect_stack
-from structuredai.state_store import apply_steering, atomic_write_json, index_brownfield, load_or_init_state
+from structuredai.state_store import (
+    apply_steering,
+    atomic_write_json,
+    index_brownfield,
+    init_architect_with_retries,
+    load_or_init_state,
+)
 from structuredai.steering import ensure_steering_file, read_steering
 from structuredai.sys_probes import free_disk_mb
 from structuredai.telemetry import render_dashboard, write_run_report
@@ -54,8 +60,7 @@ class OrchestratorEngine:
         state, tbm, ctx = self.bootstrap()
         self.wd.ensure_llm_ready()
         if not state["nodes"]:
-            run_architect(ctx, ctx["spec_text"])
-            atomic_write_json(self.state_path, state)
+            init_architect_with_retries(ctx, state, self.state_path)
         reason = "TIME_BUDGET_COMPLETE"
         while not self.stop_flag:
             elapsed = tbm.tick(paused=False)

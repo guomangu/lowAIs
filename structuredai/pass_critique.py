@@ -1,6 +1,7 @@
 """Pass 0 (Architect) and Pass 2 Antithesis (Critique & Rebalance) handlers."""
 
 from pathlib import Path
+
 from structuredai.graph_ops import detect_cycles, propagate_ripple
 from structuredai.prompts import build_prompt, wrap_untrusted
 from structuredai.validators import check_line_limit, check_placeholders

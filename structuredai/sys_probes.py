@@ -2,9 +2,9 @@
 
 import fcntl
 import os
-from pathlib import Path
 import shutil
 import socket
+from pathlib import Path
 
 
 class InstanceLock:

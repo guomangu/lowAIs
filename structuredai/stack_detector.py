@@ -1,7 +1,8 @@
 """Universal stack and project-mode detection (Greenfield vs Brownfield)."""
 
-from pathlib import Path
 import tomllib
+from pathlib import Path
+
 from structuredai.config import Config
 
 BUILTIN_STACKS: dict[str, dict] = {

@@ -1,7 +1,7 @@
 """Transactional Git isolation: branch ai-auto, selective staging & green tags."""
 
-from pathlib import Path
 import subprocess
+from pathlib import Path
 
 _SECRET_PATTERNS = (".env", ".pem", ".key", "id_rsa", ".orchestrator")
 

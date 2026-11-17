@@ -1,12 +1,18 @@
 """Thesis (1_DRAFT / 2_EXTRACT) and Synthesis (5_SYNTHESIS) pass handlers."""
 
 from pathlib import Path
+
+from structuredai import validators as val
 from structuredai.ast_reality import ast_sig_hash, extract_symbols, format_reality_md
 from structuredai.error_distiller import check_degeneration, distill_error
 from structuredai.graph_ops import propagate_ripple
 from structuredai.prompts import build_prompt, wrap_untrusted
 from structuredai.security_gate import scan_dangerous_calls
-from structuredai.validators import anti_trivial_test_gate, check_line_limit, check_placeholders, check_test_monotonicity, preflight_imports
+
+
+def _write_norm(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text if text.endswith("\n") else text + "\n", encoding="utf-8")
 
 
 def run_draft(ctx: dict, rel: str, node: dict, temp: float | None, hint: str) -> str:
@@ -23,15 +29,14 @@ def run_draft(ctx: dict, rel: str, node: dict, temp: float | None, hint: str) ->
         sections.append(("FIX_HINT", f"{hint}\n{node.get('last_error', '')}".strip()))
     sys_p, usr_p = build_prompt("1_DRAFT", cfg, sections)
     code = ctx["llm"].complete("1_DRAFT", sys_p, usr_p, temp=temp).data["code"]
-    err = check_line_limit(rel, code, cfg) or check_placeholders(code)
+    err = val.check_line_limit(rel, code, cfg) or val.check_placeholders(code)
     if not err and cfg.enable_import_preflight:
-        imp_errs = preflight_imports(code, Path(rel).suffix, ctx["exports"], ctx["installed_pkgs"])
+        imp_errs = val.preflight_imports(code, Path(rel).suffix, ctx["exports"], ctx["installed_pkgs"])
         err = "; ".join(imp_errs) if imp_errs else None
     if err:
         raise RuntimeError(err)
     target = ctx["jail"].assert_writable_by_agent(rel)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(code if code.endswith("\n") else code + "\n", encoding="utf-8")
+    _write_norm(target, code)
     ok_syn, out_syn = ctx["adapter"].check_syntax(rel)
     if not ok_syn:
         raise RuntimeError(distill_error(out_syn, code))
@@ -70,21 +75,20 @@ def run_synthesis(ctx: dict, rel: str, node: dict, temp: float | None, hint: str
     sys_p, usr_p = build_prompt("5_SYNTHESIS", cfg, secs)
     res = ctx["llm"].complete("5_SYNTHESIS", sys_p, usr_p, temp=temp).data
     opt_code, test_code = res["optimized_code"], res["test_code"]
-    err = check_line_limit(rel, opt_code, cfg) or check_line_limit(test_rel, test_code, cfg) or check_placeholders(opt_code) or check_placeholders(test_code)
+    err = val.check_line_limit(rel, opt_code, cfg) or val.check_line_limit(test_rel, test_code, cfg) or val.check_placeholders(opt_code) or val.check_placeholders(test_code)
     err = err or check_degeneration(prev_code, opt_code)
     if not err and cfg.enable_test_monotonicity:
-        err = check_test_monotonicity(prev_test, test_code)
+        err = val.check_test_monotonicity(prev_test, test_code)
     if not err and cfg.enable_dangerous_scan:
         d_errs = scan_dangerous_calls(opt_code) + scan_dangerous_calls(test_code)
         err = "; ".join(d_errs) if d_errs else None
     if not err and cfg.enable_anti_trivial:
-        t_errs = anti_trivial_test_gate(test_code, target.stem, target.suffix)
+        t_errs = val.anti_trivial_test_gate(test_code, target.stem, target.suffix)
         err = "; ".join(t_errs) if t_errs else None
     if err:
         raise RuntimeError(err)
-    target.write_text(opt_code if opt_code.endswith("\n") else opt_code + "\n", encoding="utf-8")
-    t_path.parent.mkdir(parents=True, exist_ok=True)
-    t_path.write_text(test_code if test_code.endswith("\n") else test_code + "\n", encoding="utf-8")
+    _write_norm(target, opt_code)
+    _write_norm(t_path, test_code)
     ok_l, out_l = ctx["adapter"].lint(rel)
     ok_t, out_t = ctx["adapter"].test_targeted(rel, test_rel)
     if not ok_l or not ok_t:

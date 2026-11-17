@@ -1,6 +1,7 @@
 """Single-node step dispatcher, integration tagger & circuit-breaker failure handler."""
 
 import time
+
 from structuredai.error_distiller import StagnationTracker, distill_error
 from structuredai.pass_critique import run_critique, run_rebalance
 from structuredai.passes import run_draft, run_extract, run_synthesis
@@ -37,8 +38,12 @@ class NodeRunner:
                 node["state"] = run_rebalance(ctx, rel, node, node.pop("temp_override", None))
             elif prev_st == "5_SYNTHESIS":
                 node["state"] = run_synthesis(ctx, rel, node, node.pop("temp_override", None), hint)
-        except Exception as exc:
+        except (RuntimeError, ValueError, TypeError, KeyError, OSError, PermissionError) as exc:
             self._handle_failure(tbm, node, rel, prev_st, str(exc))
+        else:
+            if node["state"] != prev_st and prev_st != "4_REBALANCE":
+                node["retries"] = 0
+                node["last_error"] = ""
         if node["state"] == "6_LOCKED" and prev_st == "5_SYNTHESIS":
             self._maybe_integration_tag(state, ctx, node["state"])
         node["time_spent_seconds"] = float(node.get("time_spent_seconds", 0.0)) + (time.monotonic() - t0)

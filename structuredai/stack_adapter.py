@@ -1,13 +1,13 @@
 """Deterministic stack hook execution with killpg timeouts, sandbox & DEPS_REALITY."""
 
-from importlib import metadata
 import os
-from pathlib import Path
 import shlex
 import shutil
 import signal
 import subprocess
 import tempfile
+from importlib import metadata
+from pathlib import Path
 
 from structuredai.config import Config
 from structuredai.security_gate import sanitized_env

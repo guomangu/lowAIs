@@ -1,8 +1,11 @@
 """Config builder and validation helpers (strictly <= 100 lines)."""
 
 from pathlib import Path
+
 from structuredai.config import Config
-from structuredai.env_parse import env_bool as _b, env_get as _get, load_dotenv, parse_duration
+from structuredai.env_parse import env_bool as _b
+from structuredai.env_parse import env_get as _get
+from structuredai.env_parse import load_dotenv, parse_duration
 
 
 def build_config(env_path: Path | None = None) -> Config:

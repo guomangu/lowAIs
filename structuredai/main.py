@@ -1,10 +1,10 @@
 """CLI entry point for StructuredAI: start, doctor, status, pause, resume, priority, retry, stop."""
 
 import argparse
-from pathlib import Path
 import shutil
 import signal
 import sys
+from pathlib import Path
 
 from structuredai.config_loader import build_config, validate_config
 from structuredai.state_machine import OrchestratorEngine

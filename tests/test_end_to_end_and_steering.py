@@ -1,9 +1,9 @@
 """End-to-end mocked-LLM dialectical run, git isolation, steering & CLI tests."""
 
 import json
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from structuredai.config_loader import build_config
